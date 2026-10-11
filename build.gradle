@@ -1,0 +1,28 @@
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+
+plugins {
+    id 'java'
+    id 'org.jetbrains.intellij.platform'
+    id 'org.jetbrains.changelog'
+}
+/*
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}*/
+
+intellijPlatform {
+    // todo: this fails for some reason. "Packages" in the jdk is not found
+    instrumentCode = false
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+
+    intellijPlatform {
+        // todo: shouldn't this be something more recent?
+        intellijIdea '2025.3.6.1'
+        testFramework TestFrameworkType.Platform.INSTANCE
+    }
+}

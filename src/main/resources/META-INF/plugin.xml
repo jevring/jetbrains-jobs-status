@@ -1,7 +1,7 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
-    <id>com.github.jevring.jetbrainsjobsstatus</id>
-    <name>jetbrains-jobs-status</name>
+    <id>net.jevring.jetbrains-jobs-status</id>
+    <name>Jetbrains Jobs Status Plugin</name>
     <vendor>jevring</vendor>
     <description><![CDATA[
         <p><b>jetbrains-jobs-status</b> is a repository that provides a pure template to make it easier to create a new plugin project.</p>
@@ -9,11 +9,14 @@
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
-
+    <depends>com.intellij.java</depends>
+    
     <resource-bundle>messages.MyBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.jevring.jetbrainsjobsstatus.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
-        <postStartupActivity implementation="com.github.jevring.jetbrainsjobsstatus.startup.MyProjectActivity" />
+        <toolWindow factoryClass="net.jevring.jetbrainsjobsstatus.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
+        <postStartupActivity implementation="net.jevring.jetbrainsjobsstatus.startup.MyProjectActivity" />
+        
     </extensions>
 </idea-plugin>
+

@@ -1,22 +1,23 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
-    <id>net.jevring.jetbrains-jobs-status</id>
-    <name>Jetbrains Jobs Status Plugin</name>
-    <vendor>jevring</vendor>
-    <description><![CDATA[
-        <p><b>jetbrains-jobs-status</b> is a repository that provides a pure template to make it easier to create a new plugin project.</p>
-        <p>The main goal of this template is to speed up the setup phase of plugin development for both new and experienced developers by preconfiguring the project scaffold and CI, linking to the proper documentation pages, and keeping everything organized.</p>
+	<id>net.jevring.jetbrains-jobs-status</id>
+	<name>Jobs Status</name>
+	<vendor>jevring</vendor>
+	<description><![CDATA[
+        <p><b>jobs-status</b> provides a REST endpoint with status on all the jobs currently running, such as unit tests</p>
+        <p>This will make it easier for tools to understand what's going on, so that they can know when jobs finish, and what their statuses were</p>
     ]]></description>
 
-    <depends>com.intellij.modules.platform</depends>
-    <depends>com.intellij.java</depends>
-    
-    <resource-bundle>messages.MyBundle</resource-bundle>
+	<depends>com.intellij.modules.platform</depends>
 
-    <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="net.jevring.jetbrainsjobsstatus.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
-        <postStartupActivity implementation="net.jevring.jetbrainsjobsstatus.startup.MyProjectActivity" />
-        
-    </extensions>
+	<extensions defaultExtensionNs="com.intellij">
+		<postStartupActivity implementation="net.jevring.jetbrainsjobsstatus.startup.JobStatusStartup"/>
+		<httpRequestHandler implementation="net.jevring.jetbrainsjobsstatus.rest.JobsStatusRestService"/>
+	</extensions>
+
+	<projectListeners>
+		<listener class="net.jevring.jetbrainsjobsstatus.listeners.JobStatusTestStatusListener"
+				  topic="com.intellij.execution.testframework.sm.runner.SMTRunnerEventsListener"/>
+	</projectListeners>
 </idea-plugin>
 

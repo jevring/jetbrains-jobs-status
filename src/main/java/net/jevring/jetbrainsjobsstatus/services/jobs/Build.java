@@ -38,6 +38,16 @@ public final class Build implements Job {
 		this.lastUpdatedAt = Instant.now();
 	}
 
+	@Override
+	public Duration idleFor() {
+		return Duration.between(lastUpdatedAt, Instant.now());
+	}
+
+	@Override
+	public boolean isActive() {
+		return state == State.STARTED;
+	}
+
 	public enum State {
 		STARTED,
 		COMPLETED,

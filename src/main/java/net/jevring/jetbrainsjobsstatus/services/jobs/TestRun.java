@@ -50,6 +50,25 @@ public final class TestRun implements Job {
 		return name;
 	}
 
+	@Override
+	public Duration idleFor() {
+		if (endedAt != null) {
+			return Duration.between(endedAt, Instant.now());
+		} else {
+			return nodeIdToTestStateMachine.values()
+			                               .stream()
+			                               .min(Comparator.comparing(TestStateMachine::getLastTimestamp))
+			                               .map(tsm -> Duration.between(tsm.getLastTimestamp(), Instant.now()))
+			                               .orElse(Duration.ZERO);
+
+		}
+	}
+
+	@Override
+	public boolean isActive() {
+		return endedAt == null;
+	}
+
 	public Map<String, TestStateMachine> getStateMachines() {
 		return Map.copyOf(nodeIdToTestStateMachine);
 	}

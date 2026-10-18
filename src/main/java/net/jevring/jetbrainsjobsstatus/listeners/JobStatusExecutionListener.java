@@ -16,12 +16,6 @@ import java.util.function.*;
 public class JobStatusExecutionListener implements ExecutionListener {
 	@Override
 	public void processStarting(@NotNull String executorId, @NotNull ExecutionEnvironment env) {
-		System.out.println("JobStatusExecutionListener.processStarting executorId = " +
-		                   executorId +
-		                   ", env = " +
-		                   env +
-		                   ", execution id = " +
-		                   env.getExecutionId());
 		RunProfile runProfile = env.getRunProfile();
 		if (runProfile instanceof SMRunnerConsolePropertiesProvider) {
 			// We're assuming this is a test, because we're listening to the tests with a similarly named class

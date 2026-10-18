@@ -5,7 +5,7 @@ import java.time.*;
 public class TestStateMachine {
 	private State state = State.KNOWN;
 	private Instant firstTimestamp = Instant.now();
-	private Instant lastTimestamp;
+	private Instant lastTimestamp = firstTimestamp;
 	private String stackTrace;
 	private String error;
 

@@ -13,6 +13,7 @@ public record TestRun(long executionId,
                       long failedTests,
                       long ignoredTests,
                       String lastUpdateAt,
+					  String idleFor,
                       Status status,
                       List<Failure> failures) {
 

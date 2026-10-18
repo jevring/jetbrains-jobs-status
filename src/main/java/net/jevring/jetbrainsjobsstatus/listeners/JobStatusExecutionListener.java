@@ -21,15 +21,11 @@ public class JobStatusExecutionListener implements ExecutionListener {
 			// We're assuming this is a test, because we're listening to the tests with a similarly named class
 			String projectPath = env.getProject().getBasePath();
 			String name = runProfile.getName();
-			report(service -> service.testRun(env.getExecutionId()).setNameAndPath(name, projectPath));
+			service().testRun(env.getExecutionId()).setNameAndPath(name, projectPath);
 		}
 	}
 
 	private static JobStatusApplicationService service() {
 		return ApplicationManager.getApplication().getService(JobStatusApplicationService.class);
-	}
-
-	private static void report(Consumer<JobStatusApplicationService> reporter) {
-		SwingUtilities.invokeLater(() -> reporter.accept(service()));
 	}
 }

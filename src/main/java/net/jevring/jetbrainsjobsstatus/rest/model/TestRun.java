@@ -6,6 +6,8 @@ import java.util.*;
  * @param lastUpdateAt This is a string because Gson doesn't automatically convert time classes to strings
  */
 public record TestRun(long executionId,
+                      String name,
+                      String projectPath,
                       long totalTests,
                       long successfulTests,
                       long failedTests,

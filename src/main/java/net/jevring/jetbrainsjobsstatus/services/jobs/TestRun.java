@@ -9,6 +9,8 @@ public final class TestRun implements Job {
 	private final Instant startedAt;
 	private final long executionId;
 	private Instant endedAt;
+	private String projectPath;
+	private String name;
 
 	public TestRun(long executionId) {
 		this.startedAt = Instant.now();
@@ -17,6 +19,11 @@ public final class TestRun implements Job {
 
 	public TestStateMachine testForNode(String nodeId) {
 		return nodeIdToTestStateMachine.computeIfAbsent(nodeId, ignored -> new TestStateMachine());
+	}
+
+	public void setNameAndPath(String name, String projectPath) {
+		this.name = name;
+		this.projectPath = projectPath;
 	}
 
 	public void finished() {
@@ -33,6 +40,14 @@ public final class TestRun implements Job {
 
 	public Instant getEndedAt() {
 		return endedAt;
+	}
+
+	public String getProjectPath() {
+		return projectPath;
+	}
+
+	public String getName() {
+		return name;
 	}
 
 	public Map<String, TestStateMachine> getStateMachines() {

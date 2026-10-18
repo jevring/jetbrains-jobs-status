@@ -9,15 +9,22 @@
     ]]></description>
 
 	<depends>com.intellij.modules.platform</depends>
+	<!--
+	<depends>com.intellij.java</depends>
+	<depends>JUnit</depends>
+	-->
 
 	<extensions defaultExtensionNs="com.intellij">
-		<postStartupActivity implementation="net.jevring.jetbrainsjobsstatus.startup.JobStatusStartup"/>
 		<httpRequestHandler implementation="net.jevring.jetbrainsjobsstatus.rest.JobsStatusRestService"/>
 	</extensions>
 
 	<projectListeners>
 		<listener class="net.jevring.jetbrainsjobsstatus.listeners.JobStatusTestStatusListener"
 				  topic="com.intellij.execution.testframework.sm.runner.SMTRunnerEventsListener"/>
+		<listener class="net.jevring.jetbrainsjobsstatus.listeners.JobStatusExecutionListener"
+				  topic="com.intellij.execution.ExecutionListener"/>
+		<listener class="net.jevring.jetbrainsjobsstatus.listeners.JobStatusProjectTaskListener"
+				  topic="com.intellij.task.ProjectTaskListener"/>
 	</projectListeners>
 </idea-plugin>
 

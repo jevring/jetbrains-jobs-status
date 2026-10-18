@@ -63,6 +63,8 @@ public class JobStatusExecutionListenerTest extends BasePlatformTestCase {
 		project.getMessageBus().syncPublisher(ExecutionManager.EXECUTION_TOPIC).processStarting("Run", env);
 		JobStatusApplicationService service = ApplicationManager.getApplication().getService(JobStatusApplicationService.class);
 		Optional<TestRun> testRun = service.getTestRun(executionId);
+		// As this is trivially true if everything is broken, only run *all* the tests in this class together, so that shouldRegisterStartOfTestExecution()
+		// shows that everything is correctly wired up, *and* that this test, then, shows that we're calling the thing, but we're not registering the run
 		assertFalse(testRun.isPresent());
 	}
 

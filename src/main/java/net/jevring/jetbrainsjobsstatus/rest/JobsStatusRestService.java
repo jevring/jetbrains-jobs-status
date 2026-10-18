@@ -36,79 +36,138 @@ public class JobsStatusRestService extends RestService {
 	public @Nullable String execute(@NotNull QueryStringDecoder queryStringDecoder,
 	                                @NotNull FullHttpRequest fullHttpRequest,
 	                                @NotNull ChannelHandlerContext channelHandlerContext) {
-
 		JobStatusApplicationService service = ApplicationManager.getApplication().getService(JobStatusApplicationService.class);
 
-		List<TestRun> testRuns = service.getTestRuns().stream().map(testRun -> {
-			Map<String, TestStateMachine> stateMachines = testRun.getStateMachines();
-			long totalTests = stateMachines.size();
-			long successfulTests = 0;
-			long failedTests = 0;
-			long ignoredTests = 0;
-			Instant lastUpdateAt = Instant.MIN;
-			List<TestRun.Failure> failures = new ArrayList<>();
-			// todo: it might be a bit iffy to expose the state machines like this. Maybe we should have a TestRunReport record or something that it can produce.
-			for (Map.Entry<String, TestStateMachine> entry : stateMachines.entrySet()) {
-				TestStateMachine test = entry.getValue();
-				switch (test.getState()) {
-					case IGNORED -> ignoredTests++;
-					case SUCCEEDED -> successfulTests++;
-					case FAILED -> {
-						failedTests++;
-						String nodeId = entry.getKey();
-
-						failures.add(new TestRun.Failure(nodeId, test.getError(), test.getStackTrace()));
+		String[] pathParts = queryStringDecoder.path().substring("/api/jobs".length()).split("/");
+		switch (pathParts.length) {
+			// Because the path starts with a /, we end up with one extra token
+			case 3 -> {
+				// For example /tests/3 or /builds/3
+				switch (pathParts[1]) {
+					case "tests" -> {
+						Optional<TestRun> testRun = service.getTestRun(Long.parseLong(pathParts[2])).map(JobsStatusRestService::mapTestRun);
+						if (testRun.isPresent()) {
+							sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, testRun.get());
+							return "ok";
+						} else {
+							sendNotFound(fullHttpRequest, channelHandlerContext);
+							return "failed";
+						}
+					}
+					case "builds" -> {
+						Optional<Build> build = service.getBuild(Long.parseLong(pathParts[2])).map(JobsStatusRestService::mapBuild);
+						if (build.isPresent()) {
+							sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, build.get());
+							return "ok";
+						} else {
+							sendNotFound(fullHttpRequest, channelHandlerContext);
+							return "failed";
+						}
+					}
+					default -> {
+						sendNotFound(fullHttpRequest, channelHandlerContext);
+						return "failed";
 					}
 				}
-				Instant stateMachineLastTimestamp = test.getLastTimestamp();
-				if (stateMachineLastTimestamp.isAfter(lastUpdateAt)) {
-					lastUpdateAt = stateMachineLastTimestamp;
+			}
+			case 2 -> {
+				// For example /tests or /builds
+				switch (pathParts[1]) {
+					case "tests" -> {
+						List<TestRun> testRuns = service.getTestRuns().stream().map(JobsStatusRestService::mapTestRun).toList();
+						sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, testRuns);
+						return null;
+					}
+					case "builds" -> {
+						List<Build> builds = service.getBuilds().stream().map(JobsStatusRestService::mapBuild).toList();
+						sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, builds);
+						return null;
+					}
+					default -> {
+						sendNotFound(fullHttpRequest, channelHandlerContext);
+						return "failed";
+					}
 				}
 			}
-			TestRun.Status status;
-			Instant runEndedAt = testRun.getEndedAt();
-			if (runEndedAt != null) {
-				if (runEndedAt.isAfter(lastUpdateAt)) {
-					lastUpdateAt = runEndedAt;
-				}
-				if (totalTests > successfulTests + failedTests + ignoredTests) {
-					status = TestRun.Status.ABORTED;
-				} else if (failedTests > 0) {
-					status = TestRun.Status.COMPLETED_WITH_FAILURES;
-				} else {
-					status = TestRun.Status.COMPLETED_SUCCESSFULLY;
-				}
-			} else {
-				status = TestRun.Status.RUNNING;
+			default -> {
+				List<TestRun> testRuns = service.getTestRuns().stream().map(JobsStatusRestService::mapTestRun).toList();
+				List<Build> builds = service.getBuilds().stream().map(JobsStatusRestService::mapBuild).toList();
+				Jobs jobs = new Jobs(testRuns, builds);
+				sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, jobs);
+				return "ok";
 			}
-			return new TestRun(testRun.getExecutionId(),
-			                   testRun.getName(),
-			                   testRun.getProjectPath(),
-			                   totalTests,
-			                   successfulTests,
-			                   failedTests,
-			                   ignoredTests,
-			                   instantToString(lastUpdateAt),
-			                   testRun.idleFor().toString(),
-			                   status,
-			                   failures);
-		}).toList();
-		List<Build> builds = service.getBuilds()
-		                            .stream()
-		                            .map(build -> new Build(build.getId(),
-		                                                    build.getProjectPath(),
-		                                                    instantToString(build.getLastUpdatedAt()),
-		                                                    build.idleFor().toString()))
-		                            .toList();
-		// todo: allow polling for just a single build/test by id. - How can the caller know the id? Currently they both use ids, but one is generated by us, so there would be overlap
-		Jobs jobs = new Jobs(testRuns, builds);
-		String responseBody = getGson().toJson(jobs);
-		byte[] responseBodyBytes = responseBody.getBytes(StandardCharsets.UTF_8);
-		DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.wrappedBuffer(responseBodyBytes));
+		}
+	}
+
+	private void sendNotFound(@NotNull FullHttpRequest fullHttpRequest, @NotNull ChannelHandlerContext channelHandlerContext) {
+		sendResponse(HttpResponseStatus.NOT_FOUND, fullHttpRequest, channelHandlerContext, Collections.singletonMap("status", "not found"));
+	}
+
+	private void sendResponse(HttpResponseStatus status, FullHttpRequest fullHttpRequest, ChannelHandlerContext channelHandlerContext, Object responseBody) {
+		String responseBodyJson = getGson().toJson(responseBody);
+		byte[] responseBodyBytes = responseBodyJson.getBytes(StandardCharsets.UTF_8);
+		DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.wrappedBuffer(responseBodyBytes));
 		response.headers().add(HttpHeaderNames.CONTENT_TYPE, "application/json; charset=utf-8");
 		response.headers().add(HttpHeaderNames.CONTENT_LENGTH, responseBodyBytes.length);
 		sendResponse(fullHttpRequest, channelHandlerContext, response);
-		return null;
+	}
+
+	private static Build mapBuild(net.jevring.jetbrainsjobsstatus.services.jobs.Build build) {
+		return new Build(build.getId(), build.getProjectPath(), instantToString(build.getLastUpdatedAt()), build.idleFor().toString());
+	}
+
+	private static TestRun mapTestRun(net.jevring.jetbrainsjobsstatus.services.jobs.TestRun testRun) {
+		Map<String, TestStateMachine> stateMachines = testRun.getStateMachines();
+		long totalTests = stateMachines.size();
+		long successfulTests = 0;
+		long failedTests = 0;
+		long ignoredTests = 0;
+		Instant lastUpdateAt = Instant.MIN;
+		List<TestRun.Failure> failures = new ArrayList<>();
+		for (Map.Entry<String, TestStateMachine> entry : stateMachines.entrySet()) {
+			TestStateMachine test = entry.getValue();
+			switch (test.getState()) {
+				case IGNORED -> ignoredTests++;
+				case SUCCEEDED -> successfulTests++;
+				case FAILED -> {
+					failedTests++;
+					String nodeId = entry.getKey();
+
+					failures.add(new TestRun.Failure(nodeId, test.getError(), test.getStackTrace()));
+				}
+			}
+			Instant stateMachineLastTimestamp = test.getLastTimestamp();
+			if (stateMachineLastTimestamp.isAfter(lastUpdateAt)) {
+				lastUpdateAt = stateMachineLastTimestamp;
+			}
+		}
+		TestRun.Status status;
+		Instant runEndedAt = testRun.getEndedAt();
+		if (runEndedAt != null) {
+			if (runEndedAt.isAfter(lastUpdateAt)) {
+				lastUpdateAt = runEndedAt;
+			}
+			if (totalTests > successfulTests + failedTests + ignoredTests) {
+				status = TestRun.Status.ABORTED;
+			} else if (failedTests > 0) {
+				status = TestRun.Status.COMPLETED_WITH_FAILURES;
+			} else {
+				status = TestRun.Status.COMPLETED_SUCCESSFULLY;
+			}
+		} else {
+			status = TestRun.Status.RUNNING;
+		}
+		return new TestRun(testRun.getExecutionId(),
+		                   testRun.getName(),
+		                   testRun.getProjectPath(),
+		                   totalTests,
+		                   successfulTests,
+		                   failedTests,
+		                   ignoredTests,
+		                   instantToString(lastUpdateAt),
+		                   testRun.idleFor().toString(),
+		                   status,
+		                   failures);
 	}
 
 	private static String instantToString(Instant lastUpdateAt) {

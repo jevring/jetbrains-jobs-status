@@ -24,8 +24,16 @@ public final class JobStatusApplicationService {
 		return testRuns.computeIfAbsent(executionId, TestRun::new);
 	}
 
+	public Optional<TestRun> getTestRun(long executionId) {
+		return Optional.ofNullable(testRuns.get(executionId));
+	}
+
 	public Build build(long buildId) {
 		return builds.computeIfAbsent(buildId, Build::new);
+	}
+
+	public Optional<Build> getBuild(long buildId) {
+		return Optional.ofNullable(builds.get(buildId));
 	}
 
 	public List<TestRun> getTestRuns() {

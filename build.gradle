@@ -17,7 +17,6 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
 
     intellijPlatform {
-        // todo: how recent should this be? Does this imply that we support exactly this version? Or is this the latest plugin version, so to speak?
         intellijIdea '2025.3.6.1'
         testFramework TestFrameworkType.Platform.INSTANCE
         /*

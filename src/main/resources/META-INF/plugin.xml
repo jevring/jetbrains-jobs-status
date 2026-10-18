@@ -4,8 +4,8 @@
 	<name>Jobs Status</name>
 	<vendor>jevring</vendor>
 	<description><![CDATA[
-        <p><b>jobs-status</b> provides a REST endpoint with status on all the jobs currently running, such as unit tests</p>
-        <p>This will make it easier for tools to understand what's going on, so that they can know when jobs finish, and what their statuses were</p>
+        <p><b>jobs-status</b> provides a REST endpoint with status on all the jobs currently running, such as unit tests or builds</p>
+        <p>This will make it easier for tools to understand what's going on, so that they can know when jobs finish, and what their statuses were.</p>
     ]]></description>
 
 	<depends>com.intellij.modules.platform</depends>

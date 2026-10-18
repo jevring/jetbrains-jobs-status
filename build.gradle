@@ -23,14 +23,13 @@ dependencies {
         // using bundledPlugin() only works if you stick to gradle 9.7.1 or lower
         bundledPlugin("com.intellij.java")
         bundledPlugin("JUnit")
-        
          */
     }
 }
 
 signPlugin {
-    certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
-    privateKey = providers.environmentVariable("PRIVATE_KEY")
+    certificateChainFile = file("./chain.crt")
+    privateKeyFile = file("./private.pem")
     password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
 }
 

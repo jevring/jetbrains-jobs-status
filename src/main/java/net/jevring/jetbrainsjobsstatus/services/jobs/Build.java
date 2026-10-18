@@ -48,6 +48,11 @@ public final class Build implements Job {
 		return state == State.STARTED;
 	}
 
+	@Override
+	public long id() {
+		return id;
+	}
+
 	public enum State {
 		STARTED,
 		COMPLETED,

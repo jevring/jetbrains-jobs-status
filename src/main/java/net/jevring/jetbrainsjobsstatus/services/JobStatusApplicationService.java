@@ -2,7 +2,6 @@ package net.jevring.jetbrainsjobsstatus.services;
 
 import com.intellij.openapi.components.*;
 import com.intellij.openapi.diagnostic.*;
-import com.intellij.util.concurrency.*;
 import net.jevring.jetbrainsjobsstatus.listeners.*;
 import net.jevring.jetbrainsjobsstatus.services.jobs.*;
 
@@ -47,26 +46,23 @@ public final class JobStatusApplicationService {
 	/**
 	 * Cleans up inactive jobs that are older than {@link #CLEAN_UP_AGE}.
 	 */
-	void cleanup() {
+	void cleanUp() {
 		try {
-			cleanupEntries(testRuns.entrySet());
-			cleanupEntries(builds.entrySet());
+			cleanUp(testRuns);
+			cleanUp(builds);
 		} catch (Exception e) {
 			log.error("Could not clean up jobs", e);
 		}
 	}
 
-	private <T extends Job> void cleanupEntries(Set<Map.Entry<Long, T>> entries) {
-		Iterator<Map.Entry<Long, T>> tri = entries.iterator();
-		while (tri.hasNext()) {
-			Map.Entry<Long, T> entry = tri.next();
-			T job = entry.getValue();
-			if (job.isActive()) {
-				continue;
-			}
+	private <T extends Job> void cleanUp(Map<Long, T> jobs) {
+		List<T> inactiveJobsInIdleOrder = jobs.values().stream().filter(job -> !job.isActive()).sorted(Comparator.comparing(Job::idleFor)).toList();
+		// We're starting from 1, since we always want to keep the most recent job, no matter what
+		for (int i = 1; i < inactiveJobsInIdleOrder.size(); i++) {
+			T job = inactiveJobsInIdleOrder.get(i);
 			if (job.idleFor().compareTo(CLEAN_UP_AGE) > 0) {
-				log.info("Cleaning up job " + job);
-				tri.remove();
+				log.info("Cleaning up job " + job + " which has been inactive for " + job.idleFor() + " which is longer than " + CLEAN_UP_AGE);
+				jobs.remove(job.id());
 			}
 		}
 	}

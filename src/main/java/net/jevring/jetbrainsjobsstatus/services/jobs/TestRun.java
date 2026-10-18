@@ -69,6 +69,11 @@ public final class TestRun implements Job {
 		return endedAt == null;
 	}
 
+	@Override
+	public long id() {
+		return executionId;
+	}
+
 	public Map<String, TestStateMachine> getStateMachines() {
 		return Map.copyOf(nodeIdToTestStateMachine);
 	}

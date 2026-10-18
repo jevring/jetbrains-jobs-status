@@ -14,7 +14,7 @@ public class JobStatusStartupActivity implements ProjectActivity {
 	@Override
 	public @Nullable Object execute(@NotNull Project project, @NotNull Continuation<? super Unit> continuation) {
 		JobStatusApplicationService service = ApplicationManager.getApplication().getService(JobStatusApplicationService.class);
-		AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(service::cleanup, 1, 1, TimeUnit.MINUTES);
+		AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(service::cleanUp, 5, 5, TimeUnit.SECONDS);
 		return "ok";
 	}
 }

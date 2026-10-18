@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-10-18
+
+### Added
+
+- Always keep the most recent inactive job of each type, no matter how old
+
 ## [0.0.3] - 2026-10-18
 
 ### Added

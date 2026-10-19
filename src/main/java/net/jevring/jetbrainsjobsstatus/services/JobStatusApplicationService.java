@@ -57,7 +57,9 @@ public final class JobStatusApplicationService {
 
 	private <T extends Job> void cleanUp(Map<Long, T> jobs) {
 		List<T> inactiveJobsInIdleOrder = jobs.values().stream().filter(job -> !job.isActive()).sorted(Comparator.comparing(Job::idleFor)).toList();
-		// We're starting from 1, since we always want to keep the most recent job, no matter what
+		// We're starting from 1, since we always want to keep the most recent job, no matter what.
+		// sorting by idle means that we're sorting from lowest idle time to highest, which means 
+		// that lowest idle time is first, and lowest idle time means most recent
 		for (int i = 1; i < inactiveJobsInIdleOrder.size(); i++) {
 			T job = inactiveJobsInIdleOrder.get(i);
 			if (job.idleFor().compareTo(CLEAN_UP_AGE) > 0) {

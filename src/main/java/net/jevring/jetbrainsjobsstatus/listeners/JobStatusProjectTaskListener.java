@@ -24,7 +24,7 @@ public class JobStatusProjectTaskListener implements ProjectTaskListener {
 	public void started(@NotNull ProjectTaskContext context) {
 		ProjectTaskScope projectTaskScope = context.getUserData(ProjectTaskScope.KEY);
 		if (projectTaskScope != null) {
-			// We're making some assumptions here. Once that the thing we're looking for is a ModuleBuildTask, and that there is only one task
+			// We're making some assumptions here. One that the thing we're looking for is a ModuleBuildTask, and that there is only one task
 			// per context. We're making these assumptions because 
 			// a) I got this from just the debugger, so it might be wrong. Maybe there's better docs, but I haven't found it
 			// b) We only get a single finished() callback, and it has the whole context. So if there were more tasks, they wouldn't get independent ids

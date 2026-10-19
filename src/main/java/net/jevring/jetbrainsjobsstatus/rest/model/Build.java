@@ -1,3 +1,5 @@
 package net.jevring.jetbrainsjobsstatus.rest.model;
 
-public record Build(long id, String projectPath, String lastUpdateAt, String idleFor) {}
+import net.jevring.jetbrainsjobsstatus.services.jobs.Build.*;
+
+public record Build(long id, String projectPath, String startedAt, String endedAt, String duration, State state, String idleFor) {}

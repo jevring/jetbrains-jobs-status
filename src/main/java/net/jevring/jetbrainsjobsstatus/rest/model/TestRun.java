@@ -12,9 +12,12 @@ public record TestRun(long executionId,
                       long successfulTests,
                       long failedTests,
                       long ignoredTests,
+                      String startedAt,
                       String lastUpdateAt,
-					  String idleFor,
+                      String duration,
                       Status status,
+                      String idleFor,
+                      Long pid,
                       List<Failure> failures) {
 
 	public enum Status {
@@ -24,5 +27,5 @@ public record TestRun(long executionId,
 		COMPLETED_WITH_FAILURES,
 	}
 
-	public record Failure(String nodeId, String error, String stackTrace) {}
+	public record Failure(String nodeId, String message, String stackTrace) {}
 }

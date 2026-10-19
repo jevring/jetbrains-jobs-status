@@ -4,25 +4,30 @@ import java.time.*;
 
 public class TestStateMachine {
 	private State state = State.KNOWN;
-	private Instant firstTimestamp = Instant.now();
-	private Instant lastTimestamp = firstTimestamp;
+	private Instant lastUpdatedAt;
+	private Instant startedAt;
+	private Instant endedAt;
 	private String stackTrace;
-	private String error;
+	private String message;
 
 	public State getState() {
 		return state;
 	}
 
-	public Instant getFirstTimestamp() {
-		return firstTimestamp;
+	public Instant getLastUpdatedAt() {
+		return lastUpdatedAt;
 	}
 
-	public Instant getLastTimestamp() {
-		return lastTimestamp;
+	public Instant getStartedAt() {
+		return startedAt;
 	}
 
-	public String getError() {
-		return error;
+	public Instant getEndedAt() {
+		return endedAt;
+	}
+
+	public String getMessage() {
+		return message;
 	}
 
 	public String getStackTrace() {
@@ -32,7 +37,8 @@ public class TestStateMachine {
 	public void started() {
 		if (state == State.KNOWN) {
 			state = State.STARTED;
-			lastTimestamp = Instant.now();
+			lastUpdatedAt = Instant.now();
+			this.startedAt = Instant.now();
 		} else {
 			System.err.printf("Tried to transition from %s to STARTED. Ignoring%n", state);
 		}
@@ -41,18 +47,20 @@ public class TestStateMachine {
 	public void finished() {
 		if (state != State.FAILED && state != State.IGNORED) {
 			state = State.SUCCEEDED;
-			lastTimestamp = Instant.now();
+			lastUpdatedAt = Instant.now();
+			endedAt = lastUpdatedAt;
 		} else {
 			System.err.printf("Tried to transition from %s to IGNORED. Ignoring%n", state);
 		}
 	}
 
-	public void failed(String error, String stackTrace) {
+	public void failed(String message, String stackTrace) {
 		if (state != State.SUCCEEDED && state != State.IGNORED) {
 			state = State.FAILED;
-			this.error = error;
+			this.message = message;
 			this.stackTrace = stackTrace;
-			lastTimestamp = Instant.now();
+			lastUpdatedAt = Instant.now();
+			endedAt = lastUpdatedAt;
 		} else {
 			System.err.printf("Tried to transition from %s to FAILED. Ignoring%n", state);
 		}
@@ -61,7 +69,7 @@ public class TestStateMachine {
 	public void ignored() {
 		if (state != State.FAILED && state != State.SUCCEEDED) {
 			state = State.IGNORED;
-			lastTimestamp = Instant.now();
+			lastUpdatedAt = Instant.now();
 		} else {
 			System.err.printf("Tried to transition from %s to IGNORED. Ignoring%n", state);
 		}
@@ -69,15 +77,7 @@ public class TestStateMachine {
 
 	public void known() {
 		// It's already known, by virtue of existing
-		lastTimestamp = Instant.now();
-	}
-
-	public String report() {
-		if (state == State.FAILED) {
-			return String.format("%s at %s because \r\n%s", state, lastTimestamp, error);
-		} else {
-			return String.format("%s at %s", state, lastTimestamp);
-		}
+		lastUpdatedAt = Instant.now();
 	}
 
 	public enum State {

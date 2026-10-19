@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-10-19
+
+### Added
+
+- More timestamps in the REST endpoint
+- Build statuses in the REST endpoint
+- PID (if available) in the REST endpoint for tests
+
+### Fixed
+
+- Better error handling in the REST endpoint
+
 ## [0.0.4] - 2026-10-18
 
 ### Added

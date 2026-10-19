@@ -1,12 +1,15 @@
 package net.jevring.jetbrainsjobsstatus.services.jobs;
 
 import java.time.*;
+import java.util.*;
 
 public final class Build implements Job {
 	private final long id;
 	private String projectPath;
 	private State state = State.STARTED;
-	private Instant lastUpdatedAt = Instant.now();
+
+	private Instant startedAt;
+	private Instant endedAt;
 
 	public Build(long id) {
 		this.id = id;
@@ -14,7 +17,7 @@ public final class Build implements Job {
 
 	public void complete(State state) {
 		this.state = state;
-		this.lastUpdatedAt = Instant.now();
+		this.endedAt = Instant.now();
 	}
 
 	public long getId() {
@@ -29,18 +32,34 @@ public final class Build implements Job {
 		return projectPath;
 	}
 
-	public Instant getLastUpdatedAt() {
-		return lastUpdatedAt;
+	public Instant getEndedAt() {
+		return endedAt;
+	}
+
+	public Instant getStartedAt() {
+		return startedAt;
 	}
 
 	public void started(String projectPath) {
 		this.projectPath = projectPath;
-		this.lastUpdatedAt = Instant.now();
+		this.startedAt = Instant.now();
+	}
+
+	public Optional<Duration> getDuration() {
+		if (endedAt != null) {
+			return Optional.of(Duration.between(startedAt, endedAt));
+		} else {
+			return Optional.empty();
+		}
 	}
 
 	@Override
 	public Duration idleFor() {
-		return Duration.between(lastUpdatedAt, Instant.now());
+		if (endedAt != null) {
+			return Duration.between(endedAt, Instant.now());
+		} else {
+			return Duration.between(startedAt, Instant.now());
+		}
 	}
 
 	@Override

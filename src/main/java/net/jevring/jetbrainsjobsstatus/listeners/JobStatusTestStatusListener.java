@@ -1,22 +1,43 @@
 package net.jevring.jetbrainsjobsstatus.listeners;
 
 import com.intellij.execution.testframework.sm.runner.*;
+import com.intellij.ide.todo.*;
 import com.intellij.openapi.application.*;
 import com.intellij.openapi.diagnostic.*;
 import net.jevring.jetbrainsjobsstatus.services.*;
 import org.jetbrains.annotations.*;
 
 import javax.swing.*;
+import java.util.concurrent.*;
 import java.util.function.*;
 
 public class JobStatusTestStatusListener extends SMTRunnerEventsAdapter {
 	private static final Logger log = Logger.getInstance(JobStatusProjectTaskListener.class);
 
 	@Override
+	public void onTestingStarted(SMTestProxy.@NotNull SMRootTestProxy testsRoot) {
+		report(service -> service.testRun(testsRoot.getExecutionId()).started(pidOf(testsRoot)));
+	}
+
+	private Long pidOf(SMTestProxy.SMRootTestProxy testsRoot) {
+		CompletableFuture<@Nullable Long> pidFuture = testsRoot.getHandler().getNativePid();
+		if (pidFuture != null) {
+			try {
+				// This is a CompletableFuture.completedFuture() whenever it isn't null.
+				// Not sure why it isn't just a long, but let's make some assumptions about 
+				// the implementation here
+				return pidFuture.get();
+			} catch (InterruptedException | ExecutionException e) {
+				return null;
+			}
+		} else {
+			return null;
+		}
+	}
+
+	@Override
 	public void onTestingFinished(SMTestProxy.@NotNull SMRootTestProxy smRootTestProxy) {
-		// We can use smRootTestProxy.wasTerminated() here to determine if the process or job was prematurely terminated, 
-		// as opposed to if it could run to completion. We don't actually need to, though, since we're able to count the number of tests
-		report(service -> service.testRun(smRootTestProxy.getExecutionId()).finished());
+		report(service -> service.testRun(smRootTestProxy.getExecutionId()).finished(smRootTestProxy.wasTerminated()));
 	}
 
 	@Override

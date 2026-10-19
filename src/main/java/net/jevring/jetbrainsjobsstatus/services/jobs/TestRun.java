@@ -6,14 +6,16 @@ import java.util.concurrent.*;
 
 public final class TestRun implements Job {
 	private final Map<String, TestStateMachine> nodeIdToTestStateMachine = new ConcurrentHashMap<>();
-	private final Instant startedAt;
 	private final long executionId;
+
+	private Instant startedAt;
 	private Instant endedAt;
 	private String projectPath;
 	private String name;
+	private Long pid;
+	private boolean wasTerminated;
 
 	public TestRun(long executionId) {
-		this.startedAt = Instant.now();
 		this.executionId = executionId;
 	}
 
@@ -26,8 +28,14 @@ public final class TestRun implements Job {
 		this.projectPath = projectPath;
 	}
 
-	public void finished() {
+	public void started(Long pid) {
+		this.pid = pid;
+		this.startedAt = Instant.now();
+	}
+
+	public void finished(boolean wasTerminated) {
 		endedAt = Instant.now();
+		this.wasTerminated = wasTerminated;
 	}
 
 	public Instant getStartedAt() {
@@ -50,6 +58,14 @@ public final class TestRun implements Job {
 		return name;
 	}
 
+	public Long getPid() {
+		return pid;
+	}
+
+	public boolean wasTerminated() {
+		return wasTerminated;
+	}
+
 	@Override
 	public Duration idleFor() {
 		if (endedAt != null) {
@@ -57,8 +73,8 @@ public final class TestRun implements Job {
 		} else {
 			return nodeIdToTestStateMachine.values()
 			                               .stream()
-			                               .min(Comparator.comparing(TestStateMachine::getLastTimestamp))
-			                               .map(tsm -> Duration.between(tsm.getLastTimestamp(), Instant.now()))
+			                               .max(Comparator.comparing(TestStateMachine::getLastUpdatedAt))
+			                               .map(tsm -> Duration.between(tsm.getLastUpdatedAt(), Instant.now()))
 			                               .orElse(Duration.ZERO);
 
 		}

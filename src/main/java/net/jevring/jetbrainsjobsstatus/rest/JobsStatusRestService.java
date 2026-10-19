@@ -11,6 +11,7 @@ import net.jevring.jetbrainsjobsstatus.services.*;
 import net.jevring.jetbrainsjobsstatus.services.jobs.*;
 import org.jetbrains.annotations.*;
 import org.jetbrains.ide.*;
+import org.slf4j.*;
 
 import java.nio.charset.*;
 import java.time.*;
@@ -26,6 +27,8 @@ import java.util.*;
  */
 public class JobsStatusRestService extends RestService {
 
+	private static final Logger log = LoggerFactory.getLogger(JobsStatusRestService.class);
+
 	@Override
 	protected @NotNull String getServiceName() {
 		// This is the endpoint name
@@ -36,66 +39,76 @@ public class JobsStatusRestService extends RestService {
 	public @Nullable String execute(@NotNull QueryStringDecoder queryStringDecoder,
 	                                @NotNull FullHttpRequest fullHttpRequest,
 	                                @NotNull ChannelHandlerContext channelHandlerContext) {
-		JobStatusApplicationService service = ApplicationManager.getApplication().getService(JobStatusApplicationService.class);
+		try {
+			JobStatusApplicationService service = ApplicationManager.getApplication().getService(JobStatusApplicationService.class);
 
-		String[] pathParts = queryStringDecoder.path().substring("/api/jobs".length()).split("/");
-		switch (pathParts.length) {
-			// Because the path starts with a /, we end up with one extra token
-			case 3 -> {
-				// For example /tests/3 or /builds/3
-				switch (pathParts[1]) {
-					case "tests" -> {
-						Optional<TestRun> testRun = service.getTestRun(Long.parseLong(pathParts[2])).map(JobsStatusRestService::mapTestRun);
-						if (testRun.isPresent()) {
-							sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, testRun.get());
-							return "ok";
-						} else {
+			String[] pathParts = queryStringDecoder.path().substring("/api/jobs".length()).split("/");
+			switch (pathParts.length) {
+				// Because the path starts with a /, we end up with one extra token
+				case 3 -> {
+					// For example /tests/3 or /builds/3
+					switch (pathParts[1]) {
+						case "tests" -> {
+							Optional<TestRun> testRun = service.getTestRun(Long.parseLong(pathParts[2])).map(JobsStatusRestService::mapTestRun);
+							if (testRun.isPresent()) {
+								sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, testRun.get());
+								return "ok";
+							} else {
+								sendNotFound(fullHttpRequest, channelHandlerContext);
+								return "failed";
+							}
+						}
+						case "builds" -> {
+							Optional<Build> build = service.getBuild(Long.parseLong(pathParts[2])).map(JobsStatusRestService::mapBuild);
+							if (build.isPresent()) {
+								sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, build.get());
+								return "ok";
+							} else {
+								sendNotFound(fullHttpRequest, channelHandlerContext);
+								return "failed";
+							}
+						}
+						default -> {
 							sendNotFound(fullHttpRequest, channelHandlerContext);
 							return "failed";
 						}
 					}
-					case "builds" -> {
-						Optional<Build> build = service.getBuild(Long.parseLong(pathParts[2])).map(JobsStatusRestService::mapBuild);
-						if (build.isPresent()) {
-							sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, build.get());
-							return "ok";
-						} else {
+				}
+				case 2 -> {
+					// For example /tests or /builds
+					switch (pathParts[1]) {
+						case "tests" -> {
+							List<TestRun> testRuns = service.getTestRuns().stream().map(JobsStatusRestService::mapTestRun).toList();
+							sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, testRuns);
+							return null;
+						}
+						case "builds" -> {
+							List<Build> builds = service.getBuilds().stream().map(JobsStatusRestService::mapBuild).toList();
+							sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, builds);
+							return null;
+						}
+						default -> {
 							sendNotFound(fullHttpRequest, channelHandlerContext);
 							return "failed";
 						}
 					}
-					default -> {
-						sendNotFound(fullHttpRequest, channelHandlerContext);
-						return "failed";
-					}
+				}
+				default -> {
+					List<TestRun> testRuns = service.getTestRuns().stream().map(JobsStatusRestService::mapTestRun).toList();
+					List<Build> builds = service.getBuilds().stream().map(JobsStatusRestService::mapBuild).toList();
+					Jobs jobs = new Jobs(testRuns, builds);
+					sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, jobs);
+					return "ok";
 				}
 			}
-			case 2 -> {
-				// For example /tests or /builds
-				switch (pathParts[1]) {
-					case "tests" -> {
-						List<TestRun> testRuns = service.getTestRuns().stream().map(JobsStatusRestService::mapTestRun).toList();
-						sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, testRuns);
-						return null;
-					}
-					case "builds" -> {
-						List<Build> builds = service.getBuilds().stream().map(JobsStatusRestService::mapBuild).toList();
-						sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, builds);
-						return null;
-					}
-					default -> {
-						sendNotFound(fullHttpRequest, channelHandlerContext);
-						return "failed";
-					}
-				}
-			}
-			default -> {
-				List<TestRun> testRuns = service.getTestRuns().stream().map(JobsStatusRestService::mapTestRun).toList();
-				List<Build> builds = service.getBuilds().stream().map(JobsStatusRestService::mapBuild).toList();
-				Jobs jobs = new Jobs(testRuns, builds);
-				sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, jobs);
-				return "ok";
-			}
+		} catch (NumberFormatException e) {
+			log.warn("Could not parse input", e);
+			sendResponse(HttpResponseStatus.BAD_REQUEST, fullHttpRequest, channelHandlerContext, Collections.singletonMap("error", e.getMessage()));
+			return "failure";
+		} catch (Exception e) {
+			log.error("Could not handle request", e);
+			sendResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR, fullHttpRequest, channelHandlerContext, Collections.singletonMap("error", e.getMessage()));
+			return "failure";
 		}
 	}
 
@@ -113,7 +126,13 @@ public class JobsStatusRestService extends RestService {
 	}
 
 	private static Build mapBuild(net.jevring.jetbrainsjobsstatus.services.jobs.Build build) {
-		return new Build(build.getId(), build.getProjectPath(), instantToString(build.getLastUpdatedAt()), build.idleFor().toString());
+		return new Build(build.getId(),
+		                 build.getProjectPath(),
+		                 instantToString(build.getStartedAt()),
+		                 instantToString(build.getEndedAt()),
+		                 build.getDuration().map(String::valueOf).orElse(null),
+		                 build.getState(),
+		                 build.idleFor().toString());
 	}
 
 	private static TestRun mapTestRun(net.jevring.jetbrainsjobsstatus.services.jobs.TestRun testRun) {
@@ -133,10 +152,10 @@ public class JobsStatusRestService extends RestService {
 					failedTests++;
 					String nodeId = entry.getKey();
 
-					failures.add(new TestRun.Failure(nodeId, test.getError(), test.getStackTrace()));
+					failures.add(new TestRun.Failure(nodeId, test.getMessage(), test.getStackTrace()));
 				}
 			}
-			Instant stateMachineLastTimestamp = test.getLastTimestamp();
+			Instant stateMachineLastTimestamp = test.getLastUpdatedAt();
 			if (stateMachineLastTimestamp.isAfter(lastUpdateAt)) {
 				lastUpdateAt = stateMachineLastTimestamp;
 			}
@@ -147,7 +166,10 @@ public class JobsStatusRestService extends RestService {
 			if (runEndedAt.isAfter(lastUpdateAt)) {
 				lastUpdateAt = runEndedAt;
 			}
-			if (totalTests > successfulTests + failedTests + ignoredTests) {
+			if (testRun.wasTerminated() || totalTests > successfulTests + failedTests + ignoredTests) {
+				// If the test was terminated before any tests are discovered, 
+				// we wouldn't have any counts to rely on, and the test would
+				// look completed, even though it wasn't.
 				status = TestRun.Status.ABORTED;
 			} else if (failedTests > 0) {
 				status = TestRun.Status.COMPLETED_WITH_FAILURES;
@@ -164,13 +186,19 @@ public class JobsStatusRestService extends RestService {
 		                   successfulTests,
 		                   failedTests,
 		                   ignoredTests,
+		                   instantToString(testRun.getStartedAt()),
 		                   instantToString(lastUpdateAt),
-		                   testRun.idleFor().toString(),
+		                   Duration.between(testRun.getStartedAt(), lastUpdateAt).toString(),
 		                   status,
+		                   testRun.idleFor().toString(),
+		                   testRun.getPid(),
 		                   failures);
 	}
 
-	private static String instantToString(Instant lastUpdateAt) {
-		return DateTimeFormatter.ISO_ZONED_DATE_TIME.format(lastUpdateAt.atZone(ZoneId.of("Z")).truncatedTo(ChronoUnit.SECONDS));
+	private static String instantToString(Instant instant) {
+		if (instant == null) {
+			return null;
+		}
+		return DateTimeFormatter.ISO_ZONED_DATE_TIME.format(instant.atZone(ZoneId.of("Z")).truncatedTo(ChronoUnit.SECONDS));
 	}
 }

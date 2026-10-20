@@ -6,7 +6,6 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.util.*;
 import com.intellij.task.*;
 import com.intellij.task.impl.*;
-import com.intellij.util.keyFMap.*;
 import net.jevring.jetbrainsjobsstatus.services.*;
 import net.jevring.jetbrainsjobsstatus.services.jobs.*;
 import org.jetbrains.annotations.*;

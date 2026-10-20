@@ -2,7 +2,6 @@ package net.jevring.jetbrainsjobsstatus.services;
 
 import com.intellij.openapi.components.*;
 import com.intellij.openapi.diagnostic.*;
-import net.jevring.jetbrainsjobsstatus.listeners.*;
 import net.jevring.jetbrainsjobsstatus.services.jobs.*;
 
 import java.time.*;
@@ -14,7 +13,7 @@ import java.util.concurrent.*;
  */
 @Service(Service.Level.APP)
 public final class JobStatusApplicationService {
-	private static final Logger log = Logger.getInstance(JobStatusProjectTaskListener.class);
+	private static final Logger log = Logger.getInstance(JobStatusApplicationService.class);
 	private static final Duration CLEAN_UP_AGE = Duration.ofMinutes(10);
 	private final Map<Long, TestRun> testRuns = new ConcurrentHashMap<>();
 	private final Map<Long, Build> builds = new ConcurrentHashMap<>();

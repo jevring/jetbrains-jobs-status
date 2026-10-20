@@ -21,7 +21,7 @@ import java.util.*;
 
 /**
  * By default, the port is 63342, but if there's already something running on that, the next one will be chosen, etc.
- * It would be nice if this could be pinned, and maybe it can me. Might be worth checking out.
+ * You can pin this port with {@code -Drpc.port=<port>}, in which case it probably doesn't hunt for ports. I don't know what happens if this port is taken.
  *
  * <p>This endpoint can be found at <a href="http://127.0.0.1:63342/api/jobs">http://127.0.0.1:63342/api/jobs</a> (depending on port, as per above)</p>
  */
@@ -141,7 +141,7 @@ public class JobsStatusRestService extends RestService {
 		long successfulTests = 0;
 		long failedTests = 0;
 		long ignoredTests = 0;
-		Instant lastUpdateAt = Instant.MIN;
+		Instant lastUpdateAt = null;
 		List<TestRun.Failure> failures = new ArrayList<>();
 		for (Map.Entry<String, TestStateMachine> entry : stateMachines.entrySet()) {
 			TestStateMachine test = entry.getValue();
@@ -156,14 +156,14 @@ public class JobsStatusRestService extends RestService {
 				}
 			}
 			Instant stateMachineLastTimestamp = test.getLastUpdatedAt();
-			if (stateMachineLastTimestamp.isAfter(lastUpdateAt)) {
+			if (lastUpdateAt == null || stateMachineLastTimestamp.isAfter(lastUpdateAt)) {
 				lastUpdateAt = stateMachineLastTimestamp;
 			}
 		}
 		TestRun.Status status;
 		Instant runEndedAt = testRun.getEndedAt();
 		if (runEndedAt != null) {
-			if (runEndedAt.isAfter(lastUpdateAt)) {
+			if (lastUpdateAt == null || runEndedAt.isAfter(lastUpdateAt)) {
 				lastUpdateAt = runEndedAt;
 			}
 			if (testRun.wasTerminated() || totalTests > successfulTests + failedTests + ignoredTests) {
@@ -188,11 +188,18 @@ public class JobsStatusRestService extends RestService {
 		                   ignoredTests,
 		                   instantToString(testRun.getStartedAt()),
 		                   instantToString(lastUpdateAt),
-		                   Duration.between(testRun.getStartedAt(), lastUpdateAt).toString(),
+		                   durationToString(testRun.getStartedAt(), lastUpdateAt),
 		                   status,
 		                   testRun.idleFor().toString(),
 		                   testRun.getPid(),
 		                   failures);
+	}
+
+	private static String durationToString(Instant startedAt, Instant lastUpdateAt) {
+		if (startedAt == null || lastUpdateAt == null) {
+			return null;
+		}
+		return Duration.between(startedAt, lastUpdateAt).toString();
 	}
 
 	private static String instantToString(Instant instant) {

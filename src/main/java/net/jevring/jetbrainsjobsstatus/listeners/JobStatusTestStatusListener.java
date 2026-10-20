@@ -1,7 +1,6 @@
 package net.jevring.jetbrainsjobsstatus.listeners;
 
 import com.intellij.execution.testframework.sm.runner.*;
-import com.intellij.ide.todo.*;
 import com.intellij.openapi.application.*;
 import com.intellij.openapi.diagnostic.*;
 import net.jevring.jetbrainsjobsstatus.services.*;
@@ -12,7 +11,7 @@ import java.util.concurrent.*;
 import java.util.function.*;
 
 public class JobStatusTestStatusListener extends SMTRunnerEventsAdapter {
-	private static final Logger log = Logger.getInstance(JobStatusProjectTaskListener.class);
+	private static final Logger log = Logger.getInstance(JobStatusTestStatusListener.class);
 
 	@Override
 	public void onTestingStarted(SMTestProxy.@NotNull SMRootTestProxy testsRoot) {

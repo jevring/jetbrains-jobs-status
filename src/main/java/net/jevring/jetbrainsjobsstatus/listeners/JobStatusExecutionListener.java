@@ -2,16 +2,11 @@ package net.jevring.jetbrainsjobsstatus.listeners;
 
 import com.intellij.execution.*;
 import com.intellij.execution.configurations.*;
-import com.intellij.execution.process.*;
 import com.intellij.execution.runners.*;
 import com.intellij.execution.testframework.sm.runner.*;
 import com.intellij.openapi.application.*;
 import net.jevring.jetbrainsjobsstatus.services.*;
 import org.jetbrains.annotations.*;
-
-import javax.print.attribute.standard.*;
-import javax.swing.*;
-import java.util.function.*;
 
 public class JobStatusExecutionListener implements ExecutionListener {
 	@Override

@@ -1,13 +1,14 @@
 package net.jevring.jetbrainsjobsstatus.listeners;
 
+import com.intellij.execution.process.*;
 import com.intellij.execution.testframework.sm.runner.*;
 import com.intellij.openapi.application.*;
 import com.intellij.openapi.diagnostic.*;
 import net.jevring.jetbrainsjobsstatus.services.*;
+import net.jevring.jetbrainsjobsstatus.services.jobs.*;
 import org.jetbrains.annotations.*;
 
 import javax.swing.*;
-import java.util.concurrent.*;
 import java.util.function.*;
 
 public class JobStatusTestStatusListener extends SMTRunnerEventsAdapter {
@@ -18,25 +19,10 @@ public class JobStatusTestStatusListener extends SMTRunnerEventsAdapter {
 		report(service -> service.testRun(testsRoot.getExecutionId()).started(pidOf(testsRoot)));
 	}
 
-	private Long pidOf(SMTestProxy.SMRootTestProxy testsRoot) {
-		CompletableFuture<@Nullable Long> pidFuture = testsRoot.getHandler().getNativePid();
-		if (pidFuture != null) {
-			try {
-				// This is a CompletableFuture.completedFuture() whenever it isn't null.
-				// Not sure why it isn't just a long, but let's make some assumptions about 
-				// the implementation here
-				return pidFuture.get();
-			} catch (InterruptedException | ExecutionException e) {
-				return null;
-			}
-		} else {
-			return null;
-		}
-	}
-
 	@Override
 	public void onTestingFinished(SMTestProxy.@NotNull SMRootTestProxy smRootTestProxy) {
-		report(service -> service.testRun(smRootTestProxy.getExecutionId()).finished(smRootTestProxy.wasTerminated()));
+		TestRun.Termination termination = smRootTestProxy.wasTerminated() ? TestRun.Termination.TERMINATED : TestRun.Termination.NORMAL;
+		report(service -> service.testRun(smRootTestProxy.getExecutionId()).finished(termination, 0));
 	}
 
 	@Override
@@ -45,7 +31,7 @@ public class JobStatusTestStatusListener extends SMTRunnerEventsAdapter {
 			log.warn("Skipping onTestStarted for null nodeId for test " + test.getPresentableName());
 			return;
 		}
-		report(service -> service.testRun(test.getRoot().getExecutionId()).testForNode(nodeId).started());
+		report(service -> service.testRun(test.getRoot().getExecutionId()).testForNode(nodeId).started(test.getPresentableName()));
 	}
 
 	@Override
@@ -90,5 +76,9 @@ public class JobStatusTestStatusListener extends SMTRunnerEventsAdapter {
 
 	private static void report(Consumer<JobStatusApplicationService> reporter) {
 		SwingUtilities.invokeLater(() -> reporter.accept(service()));
+	}
+
+	private static Long pidOf(SMTestProxy.SMRootTestProxy testsRoot) {
+		return Utils.pidOf(testsRoot.getHandler());
 	}
 }

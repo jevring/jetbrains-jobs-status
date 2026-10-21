@@ -1,14 +1,18 @@
 package net.jevring.jetbrainsjobsstatus.services.jobs;
 
+import com.intellij.openapi.util.*;
+import org.jetbrains.annotations.*;
+
 import java.time.*;
 
 public class TestStateMachine {
-	private State state = State.KNOWN;
-	private Instant lastUpdatedAt;
-	private Instant startedAt;
-	private Instant endedAt;
-	private String stackTrace;
-	private String message;
+	private volatile State state = State.KNOWN;
+	private volatile Instant lastUpdatedAt;
+	private volatile Instant startedAt;
+	private volatile Instant endedAt;
+	private volatile String stackTrace;
+	private volatile String message;
+	private volatile String name;
 
 	public State getState() {
 		return state;
@@ -34,11 +38,16 @@ public class TestStateMachine {
 		return stackTrace;
 	}
 
-	public void started() {
+	public String getName() {
+		return name;
+	}
+
+	public void started(String name) {
 		if (state == State.KNOWN) {
 			state = State.STARTED;
 			lastUpdatedAt = Instant.now();
-			this.startedAt = Instant.now();
+			startedAt = Instant.now();
+			this.name = name;
 		} else {
 			System.err.printf("Tried to transition from %s to STARTED. Ignoring%n", state);
 		}

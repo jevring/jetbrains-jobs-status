@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+## [0.0.7] - 2026-10-21
+
+### Added
+
+- More details about failures, including exit code
+- Earlier detection of process start, and clearer handling of termination
+- Failures now specify names, including via annotations like `@DisplayName` and `@ParameterizedTest`.
+
 ## [0.0.6] - 2026-10-20
 
 ### Fixed

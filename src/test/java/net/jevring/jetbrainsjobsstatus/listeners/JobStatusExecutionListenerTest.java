@@ -38,7 +38,7 @@ public class JobStatusExecutionListenerTest extends BasePlatformTestCase {
 		// It would be nicer if we could trigger something *else* and then see that our listener got invoked correctly.
 		// That would also test that we had wired everything up correctly, but there doesn't seem to be a way to do that, 
 		// so calling our listener directly is the best we've got.
-		project.getMessageBus().syncPublisher(ExecutionManager.EXECUTION_TOPIC).processStarting("Run", env);
+		project.getMessageBus().syncPublisher(ExecutionManager.EXECUTION_TOPIC).processStartScheduled("Run", env);
 		JobStatusApplicationService service = ApplicationManager.getApplication().getService(JobStatusApplicationService.class);
 		Optional<TestRun> testRun = service.getTestRun(executionId);
 		assertTrue(testRun.isPresent());

@@ -152,7 +152,7 @@ public class JobsStatusRestService extends RestService {
 					failedTests++;
 					String nodeId = entry.getKey();
 
-					failures.add(new TestRun.Failure(nodeId, test.getMessage(), test.getStackTrace()));
+					failures.add(new TestRun.Failure(nodeId, test.getName(), test.getMessage(), test.getStackTrace()));
 				}
 			}
 			Instant stateMachineLastTimestamp = test.getLastUpdatedAt();
@@ -166,16 +166,13 @@ public class JobsStatusRestService extends RestService {
 			if (lastUpdateAt == null || runEndedAt.isAfter(lastUpdateAt)) {
 				lastUpdateAt = runEndedAt;
 			}
-			if (testRun.wasTerminated() || totalTests > successfulTests + failedTests + ignoredTests) {
-				// If the test was terminated before any tests are discovered, 
-				// we wouldn't have any counts to rely on, and the test would
-				// look completed, even though it wasn't.
-				status = TestRun.Status.ABORTED;
-			} else if (failedTests > 0) {
-				status = TestRun.Status.COMPLETED_WITH_FAILURES;
-			} else {
-				status = TestRun.Status.COMPLETED_SUCCESSFULLY;
-			}
+			status = switch (testRun.getTermination()) {
+				case NOT_STARTED, TERMINATED -> TestRun.Status.ABORTED;
+				// You can't combine null with another value here, so we have to have two branches here
+				case NORMAL -> calculateFromTests(totalTests, successfulTests, failedTests, ignoredTests);
+				case null -> calculateFromTests(totalTests, successfulTests, failedTests, ignoredTests);
+			};
+
 		} else {
 			status = TestRun.Status.RUNNING;
 		}
@@ -186,13 +183,35 @@ public class JobsStatusRestService extends RestService {
 		                   successfulTests,
 		                   failedTests,
 		                   ignoredTests,
+		                   instantToString(testRun.getScheduledAt()),
 		                   instantToString(testRun.getStartedAt()),
 		                   instantToString(lastUpdateAt),
 		                   durationToString(testRun.getStartedAt(), lastUpdateAt),
 		                   status,
 		                   testRun.idleFor().toString(),
 		                   testRun.getPid(),
+		                   testRun.getExitCode(),
 		                   failures);
+	}
+
+	private static TestRun.Status calculateFromTests(long totalTests, long successfulTests, long failedTests, long ignoredTests) {
+		if (totalTests > successfulTests + failedTests + ignoredTests) {
+			// This would indicate that the test ended in the middle of things, for some reason. 
+			// Or, in theory, that some test didn't classify as successful, failed, or ignored.
+			// Timed out, perhaps. But then that would either be reported as failed or the process 
+			// would have been terminated, which would mean that we're take the branch above. 
+			// Keep this still
+			log.warn("Had more total tests than finished tests. Total: {}. Successful: {}. Failed: {}. Ignored: {}",
+			         totalTests,
+			         successfulTests,
+			         failedTests,
+			         ignoredTests);
+			return TestRun.Status.ABORTED;
+		} else if (failedTests > 0) {
+			return TestRun.Status.COMPLETED_WITH_FAILURES;
+		} else {
+			return TestRun.Status.COMPLETED_SUCCESSFULLY;
+		}
 	}
 
 	private static String durationToString(Instant startedAt, Instant lastUpdateAt) {

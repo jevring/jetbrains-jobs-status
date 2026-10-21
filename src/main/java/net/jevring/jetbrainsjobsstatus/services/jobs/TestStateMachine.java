@@ -1,12 +1,9 @@
 package net.jevring.jetbrainsjobsstatus.services.jobs;
 
-import com.intellij.openapi.util.*;
-import org.jetbrains.annotations.*;
-
 import java.time.*;
 
 public class TestStateMachine {
-	private volatile State state = State.KNOWN;
+	private volatile TestState state = TestState.KNOWN;
 	private volatile Instant lastUpdatedAt;
 	private volatile Instant startedAt;
 	private volatile Instant endedAt;
@@ -14,7 +11,7 @@ public class TestStateMachine {
 	private volatile String message;
 	private volatile String name;
 
-	public State getState() {
+	public TestState getState() {
 		return state;
 	}
 
@@ -43,8 +40,8 @@ public class TestStateMachine {
 	}
 
 	public void started(String name) {
-		if (state == State.KNOWN) {
-			state = State.STARTED;
+		if (state == TestState.KNOWN) {
+			state = TestState.STARTED;
 			lastUpdatedAt = Instant.now();
 			startedAt = Instant.now();
 			this.name = name;
@@ -54,8 +51,8 @@ public class TestStateMachine {
 	}
 
 	public void finished() {
-		if (state != State.FAILED && state != State.IGNORED) {
-			state = State.SUCCEEDED;
+		if (state != TestState.FAILED && state != TestState.IGNORED) {
+			state = TestState.SUCCEEDED;
 			lastUpdatedAt = Instant.now();
 			endedAt = lastUpdatedAt;
 		} else {
@@ -64,8 +61,8 @@ public class TestStateMachine {
 	}
 
 	public void failed(String message, String stackTrace) {
-		if (state != State.SUCCEEDED && state != State.IGNORED) {
-			state = State.FAILED;
+		if (state != TestState.SUCCEEDED && state != TestState.IGNORED) {
+			state = TestState.FAILED;
 			this.message = message;
 			this.stackTrace = stackTrace;
 			lastUpdatedAt = Instant.now();
@@ -76,8 +73,8 @@ public class TestStateMachine {
 	}
 
 	public void ignored() {
-		if (state != State.FAILED && state != State.SUCCEEDED) {
-			state = State.IGNORED;
+		if (state != TestState.FAILED && state != TestState.SUCCEEDED) {
+			state = TestState.IGNORED;
 			lastUpdatedAt = Instant.now();
 		} else {
 			System.err.printf("Tried to transition from %s to IGNORED. Ignoring%n", state);
@@ -87,13 +84,5 @@ public class TestStateMachine {
 	public void known() {
 		// It's already known, by virtue of existing
 		lastUpdatedAt = Instant.now();
-	}
-
-	public enum State {
-		KNOWN,
-		STARTED,
-		SUCCEEDED,
-		FAILED,
-		IGNORED
 	}
 }

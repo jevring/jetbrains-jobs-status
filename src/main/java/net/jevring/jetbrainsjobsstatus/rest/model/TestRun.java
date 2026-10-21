@@ -1,5 +1,7 @@
 package net.jevring.jetbrainsjobsstatus.rest.model;
 
+import net.jevring.jetbrainsjobsstatus.services.jobs.*;
+
 import java.util.*;
 
 /**
@@ -20,6 +22,7 @@ public record TestRun(long executionId,
                       String idleFor,
                       Long pid,
                       Integer exitCode,
+                      List<Test> tests,
                       List<Failure> failures) {
 
 	public enum Status {
@@ -30,4 +33,6 @@ public record TestRun(long executionId,
 	}
 
 	public record Failure(String nodeId, String name, String message, String stackTrace) {}
+
+	public record Test(String nodeId, String name, TestState state) {}
 }

@@ -11,6 +11,7 @@
 - More details about failures, including exit code
 - Earlier detection of process start, and clearer handling of termination
 - Failures now specify names, including via annotations like `@DisplayName` and `@ParameterizedTest`.
+- `verbose=true` to include the names of all known tests and their states. Failures are included, but failure *details* are in `failures`
 
 ## [0.0.6] - 2026-10-20
 

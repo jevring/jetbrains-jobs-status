@@ -54,7 +54,7 @@ public class JobStatusProjectTaskListener implements ProjectTaskListener {
 	public void finished(ProjectTaskManager.@NotNull Result result) {
 		Long id = result.getContext().getUserData(ID_KEY);
 		if (id != null) {
-			build(id).complete(result.hasErrors() ? Build.State.FAILED : Build.State.COMPLETED);
+			build(id).complete(result.hasErrors() ? BuildState.FAILED : BuildState.COMPLETED);
 		}
 	}
 

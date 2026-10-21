@@ -6,7 +6,7 @@ import java.util.*;
 public final class Build implements Job {
 	private final long id;
 	private String projectPath;
-	private State state = State.STARTED;
+	private BuildState state = BuildState.STARTED;
 
 	private Instant startedAt;
 	private Instant endedAt;
@@ -15,7 +15,7 @@ public final class Build implements Job {
 		this.id = id;
 	}
 
-	public void complete(State state) {
+	public void complete(BuildState state) {
 		this.state = state;
 		this.endedAt = Instant.now();
 	}
@@ -24,7 +24,7 @@ public final class Build implements Job {
 		return id;
 	}
 
-	public State getState() {
+	public BuildState getState() {
 		return state;
 	}
 
@@ -64,7 +64,7 @@ public final class Build implements Job {
 
 	@Override
 	public boolean isActive() {
-		return state == State.STARTED;
+		return state == BuildState.STARTED;
 	}
 
 	@Override
@@ -72,10 +72,5 @@ public final class Build implements Job {
 		return id;
 	}
 
-	public enum State {
-		STARTED,
-		COMPLETED,
-		FAILED
-	}
 }
 

@@ -41,6 +41,8 @@ public class JobsStatusRestService extends RestService {
 	                                @NotNull ChannelHandlerContext channelHandlerContext) {
 		try {
 			JobStatusApplicationService service = ApplicationManager.getApplication().getService(JobStatusApplicationService.class);
+			List<String> verboseValues = queryStringDecoder.parameters().getOrDefault("verbose", Collections.emptyList());
+			boolean verbose = verboseValues.equals(Collections.singletonList("true"));
 
 			String[] pathParts = queryStringDecoder.path().substring("/api/jobs".length()).split("/");
 			switch (pathParts.length) {
@@ -49,7 +51,7 @@ public class JobsStatusRestService extends RestService {
 					// For example /tests/3 or /builds/3
 					switch (pathParts[1]) {
 						case "tests" -> {
-							Optional<TestRun> testRun = service.getTestRun(Long.parseLong(pathParts[2])).map(JobsStatusRestService::mapTestRun);
+							Optional<TestRun> testRun = service.getTestRun(Long.parseLong(pathParts[2])).map(testRun1 -> mapTestRun(testRun1, verbose));
 							if (testRun.isPresent()) {
 								sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, testRun.get());
 								return "ok";
@@ -78,7 +80,7 @@ public class JobsStatusRestService extends RestService {
 					// For example /tests or /builds
 					switch (pathParts[1]) {
 						case "tests" -> {
-							List<TestRun> testRuns = service.getTestRuns().stream().map(JobsStatusRestService::mapTestRun).toList();
+							List<TestRun> testRuns = service.getTestRuns().stream().map(testRun -> mapTestRun(testRun, verbose)).toList();
 							sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, testRuns);
 							return null;
 						}
@@ -93,12 +95,16 @@ public class JobsStatusRestService extends RestService {
 						}
 					}
 				}
-				default -> {
-					List<TestRun> testRuns = service.getTestRuns().stream().map(JobsStatusRestService::mapTestRun).toList();
+				case 1 -> {
+					List<TestRun> testRuns = service.getTestRuns().stream().map(testRun -> mapTestRun(testRun, verbose)).toList();
 					List<Build> builds = service.getBuilds().stream().map(JobsStatusRestService::mapBuild).toList();
 					Jobs jobs = new Jobs(testRuns, builds);
 					sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, jobs);
 					return "ok";
+				}
+				default -> {
+					sendNotFound(fullHttpRequest, channelHandlerContext);
+					return "failed";
 				}
 			}
 		} catch (NumberFormatException e) {
@@ -135,7 +141,7 @@ public class JobsStatusRestService extends RestService {
 		                 build.idleFor().toString());
 	}
 
-	private static TestRun mapTestRun(net.jevring.jetbrainsjobsstatus.services.jobs.TestRun testRun) {
+	private static TestRun mapTestRun(net.jevring.jetbrainsjobsstatus.services.jobs.TestRun testRun, boolean verbose) {
 		Map<String, TestStateMachine> stateMachines = testRun.getStateMachines();
 		long totalTests = stateMachines.size();
 		long successfulTests = 0;
@@ -143,17 +149,21 @@ public class JobsStatusRestService extends RestService {
 		long ignoredTests = 0;
 		Instant lastUpdateAt = null;
 		List<TestRun.Failure> failures = new ArrayList<>();
+		List<TestRun.Test> tests = new ArrayList<>();
 		for (Map.Entry<String, TestStateMachine> entry : stateMachines.entrySet()) {
+			String nodeId = entry.getKey();
 			TestStateMachine test = entry.getValue();
 			switch (test.getState()) {
 				case IGNORED -> ignoredTests++;
 				case SUCCEEDED -> successfulTests++;
 				case FAILED -> {
 					failedTests++;
-					String nodeId = entry.getKey();
 
 					failures.add(new TestRun.Failure(nodeId, test.getName(), test.getMessage(), test.getStackTrace()));
 				}
+			}
+			if (verbose) {
+				tests.add(new TestRun.Test(nodeId, test.getName(), test.getState()));
 			}
 			Instant stateMachineLastTimestamp = test.getLastUpdatedAt();
 			if (lastUpdateAt == null || stateMachineLastTimestamp.isAfter(lastUpdateAt)) {
@@ -191,6 +201,7 @@ public class JobsStatusRestService extends RestService {
 		                   testRun.idleFor().toString(),
 		                   testRun.getPid(),
 		                   testRun.getExitCode(),
+		                   tests,
 		                   failures);
 	}
 

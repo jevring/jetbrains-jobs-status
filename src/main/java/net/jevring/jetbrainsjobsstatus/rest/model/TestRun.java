@@ -10,18 +10,16 @@ import java.util.*;
 public record TestRun(long executionId,
                       String name,
                       String projectPath,
+                      Status status,
+                      Process process,
                       long totalTests,
                       long successfulTests,
                       long failedTests,
                       long ignoredTests,
-                      String scheduledAt,
                       String startedAt,
                       String lastUpdateAt,
                       String duration,
-                      Status status,
                       String idleFor,
-                      Long pid,
-                      Integer exitCode,
                       List<Test> tests,
                       List<Failure> failures) {
 
@@ -30,9 +28,10 @@ public record TestRun(long executionId,
 		ABORTED,
 		COMPLETED_SUCCESSFULLY,
 		COMPLETED_WITH_FAILURES,
+		COMPLETED_WITHOUT_TESTS
 	}
 
-	public record Failure(String nodeId, String name, String message, String stackTrace) {}
+	public record Failure(String nodeId, String name, String locationUrl, String message, String stackTrace) {}
 
-	public record Test(String nodeId, String name, TestState state) {}
+	public record Test(String nodeId, String name, String locationUrl, TestState state) {}
 }

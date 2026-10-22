@@ -15,7 +15,7 @@ links for those numbers. They just get incremented for each build/test. You can 
 Tests and builds are automatically cleaned up. Once they are no longer active (i.e. after they completed either successfully or
 with a failure), they live for a few minutes more before being deleted. The most recent build/test is always kept, no matter how old.
 
-You can pin this port with {@code -Drpc.port=<port>}, in which case it probably doesn't hunt for ports. I don't know what happens if this port is taken.
+You can pin this port with `-Drpc.port=<port>`, in which case it probably doesn't hunt for ports. I don't know what happens if this port is taken.
 
 ![Build](https://github.com/jevring/jetbrains-jobs-status/workflows/Build/badge.svg)
 [![Version](https://img.shields.io/jetbrains/plugin/v/35252.svg)](https://plugins.jetbrains.com/plugin/35252)

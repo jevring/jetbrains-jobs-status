@@ -10,67 +10,62 @@ public final class TestRun implements Job {
 	 * This is a fallback in case all other timestamps are null.
 	 */
 	private final Instant createdAt = Instant.now();
+	private final Process process = new Process();
 	private final long executionId;
 
+	// todo: clean up what we don't need in here
+
 	// These fields are mutated on the EDT and read by the RestService on a different thread, so they should be volatile
-	private volatile Instant scheduledAt;
 	private volatile Instant startedAt;
-	private volatile Instant endedAt;
+	private volatile Instant finishedAt;
 	private volatile String projectPath;
 	private volatile String name;
-	private volatile Long pid;
-	private volatile Termination termination;
-	private volatile Integer exitCode;
+	private volatile boolean terminated;
 
 	public TestRun(long executionId) {
 		this.executionId = executionId;
+	}
+
+	public Process process() {
+		return this.process;
 	}
 
 	public TestStateMachine testForNode(String nodeId) {
 		return nodeIdToTestStateMachine.computeIfAbsent(nodeId, ignored -> new TestStateMachine());
 	}
 
-	public void scheduled(String name, String projectPath) {
+	public void setNameAndProjectPath(String name, String projectPath) {
 		this.name = name;
 		this.projectPath = projectPath;
-		this.scheduledAt = Instant.now();
 	}
 
-	public void started(Long pid) {
-		if (this.pid == null && pid != null) {
-			this.pid = pid;
-		}
+	public void started() {
 		this.startedAt = Instant.now();
 	}
 
-	public void finished(Termination termination, Integer exitCode) {
-		endedAt = Instant.now();
-		// As this is called from multiple places, we don't want to blindly overwrite what we have
-		// Technically there's a check-then-act thing here, since it's volatile, not atomic,
-		// but since we want to let this be null, as opposed to an int, which is primitive, 
-		// we're going to let it slide.
-		if (this.termination == null || termination != null) {
-			this.termination = termination;
-		}
-		if (this.exitCode == null || exitCode != null) {
-			this.exitCode = exitCode;
-		}
-	}
-
-	public Instant getScheduledAt() {
-		return scheduledAt;
+	public void finished(boolean wasTerminated) {
+		this.terminated = wasTerminated;
+		this.finishedAt = Instant.now();
 	}
 
 	public Instant getStartedAt() {
 		return startedAt;
 	}
 
-	public long getExecutionId() {
-		return executionId;
+	public Instant getCreatedAt() {
+		return createdAt;
 	}
 
-	public Instant getEndedAt() {
-		return endedAt;
+	public Instant getFinishedAt() {
+		return finishedAt;
+	}
+
+	public boolean wasTerminated() {
+		return terminated;
+	}
+
+	public long getExecutionId() {
+		return executionId;
 	}
 
 	public String getProjectPath() {
@@ -81,22 +76,13 @@ public final class TestRun implements Job {
 		return name;
 	}
 
-	public Long getPid() {
-		return pid;
-	}
-
-	public Integer getExitCode() {
-		return exitCode;
-	}
-
-	public Termination getTermination() {
-		return termination;
-	}
-
 	@Override
 	public Duration idleFor() {
-		if (endedAt != null) {
-			return Duration.between(endedAt, Instant.now());
+		// We assume that we get callbacks in such an order that the suite is terminated after each test in the suite.
+		// As all events that require the execution id have to go through the EDT (why this is I don't know, but whatever),
+		// they would get linearized, assuming the callbacks happen in order.
+		if (finishedAt != null) {
+			return Duration.between(finishedAt, Instant.now());
 		} else {
 			return nodeIdToTestStateMachine.values()
 			                               .stream()
@@ -107,8 +93,6 @@ public final class TestRun implements Job {
 				                               // want to keep some of these timestamps around anyway, we may as well use them
 				                               if (startedAt != null) {
 					                               return Duration.between(startedAt, Instant.now());
-				                               } else if (scheduledAt != null) {
-					                               return Duration.between(scheduledAt, Instant.now());
 				                               } else {
 					                               return Duration.between(createdAt, Instant.now());
 				                               }
@@ -119,7 +103,7 @@ public final class TestRun implements Job {
 
 	@Override
 	public boolean isActive() {
-		return endedAt == null;
+		return finishedAt == null;
 	}
 
 	@Override
@@ -129,11 +113,5 @@ public final class TestRun implements Job {
 
 	public Map<String, TestStateMachine> getStateMachines() {
 		return Map.copyOf(nodeIdToTestStateMachine);
-	}
-
-	public enum Termination {
-		NOT_STARTED,
-		NORMAL,
-		TERMINATED
 	}
 }

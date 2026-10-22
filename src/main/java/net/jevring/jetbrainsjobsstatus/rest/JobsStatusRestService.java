@@ -9,6 +9,7 @@ import net.jevring.jetbrainsjobsstatus.rest.model.Build;
 import net.jevring.jetbrainsjobsstatus.rest.model.TestRun;
 import net.jevring.jetbrainsjobsstatus.services.*;
 import net.jevring.jetbrainsjobsstatus.services.jobs.*;
+import net.jevring.jetbrainsjobsstatus.services.jobs.Process;
 import org.jetbrains.annotations.*;
 import org.jetbrains.ide.*;
 import org.slf4j.*;
@@ -26,13 +27,17 @@ import java.util.*;
  * <p>This endpoint can be found at <a href="http://127.0.0.1:63342/api/jobs">http://127.0.0.1:63342/api/jobs</a> (depending on port, as per above)</p>
  */
 public class JobsStatusRestService extends RestService {
-
 	private static final Logger log = LoggerFactory.getLogger(JobsStatusRestService.class);
 
 	@Override
 	protected @NotNull String getServiceName() {
 		// This is the endpoint name
 		return "jobs";
+	}
+
+	@Override
+	protected int getMaxRequestsPerMinute() {
+		return Integer.MAX_VALUE;
 	}
 
 	@Override
@@ -134,10 +139,10 @@ public class JobsStatusRestService extends RestService {
 	private static Build mapBuild(net.jevring.jetbrainsjobsstatus.services.jobs.Build build) {
 		return new Build(build.getId(),
 		                 build.getProjectPath(),
+		                 build.getState(),
 		                 instantToString(build.getStartedAt()),
 		                 instantToString(build.getEndedAt()),
 		                 build.getDuration().map(String::valueOf).orElse(null),
-		                 build.getState(),
 		                 build.idleFor().toString());
 	}
 
@@ -159,11 +164,11 @@ public class JobsStatusRestService extends RestService {
 				case FAILED -> {
 					failedTests++;
 
-					failures.add(new TestRun.Failure(nodeId, test.getName(), test.getMessage(), test.getStackTrace()));
+					failures.add(new TestRun.Failure(nodeId, test.getName(), test.getLocationUrl(), test.getMessage(), test.getStackTrace()));
 				}
 			}
 			if (verbose) {
-				tests.add(new TestRun.Test(nodeId, test.getName(), test.getState()));
+				tests.add(new TestRun.Test(nodeId, test.getName(), test.getLocationUrl(), test.getState()));
 			}
 			Instant stateMachineLastTimestamp = test.getLastUpdatedAt();
 			if (lastUpdateAt == null || stateMachineLastTimestamp.isAfter(lastUpdateAt)) {
@@ -171,58 +176,49 @@ public class JobsStatusRestService extends RestService {
 			}
 		}
 		TestRun.Status status;
-		Instant runEndedAt = testRun.getEndedAt();
-		if (runEndedAt != null) {
-			if (lastUpdateAt == null || runEndedAt.isAfter(lastUpdateAt)) {
-				lastUpdateAt = runEndedAt;
+		Instant testFinishedAt = testRun.getFinishedAt();
+		if (testFinishedAt != null) {
+			if (lastUpdateAt == null || testFinishedAt.isAfter(lastUpdateAt)) {
+				lastUpdateAt = testFinishedAt;
 			}
-			status = switch (testRun.getTermination()) {
-				case NOT_STARTED, TERMINATED -> TestRun.Status.ABORTED;
-				// You can't combine null with another value here, so we have to have two branches here
-				case NORMAL -> calculateFromTests(totalTests, successfulTests, failedTests, ignoredTests);
-				case null -> calculateFromTests(totalTests, successfulTests, failedTests, ignoredTests);
-			};
-
+			if (testRun.wasTerminated()) {
+				status = TestRun.Status.ABORTED;
+			} else if (failedTests > 0) {
+				status = TestRun.Status.COMPLETED_WITH_FAILURES;
+			} else if (totalTests == 0) {
+				status = TestRun.Status.COMPLETED_WITHOUT_TESTS;
+			} else {
+				status = TestRun.Status.COMPLETED_SUCCESSFULLY;
+			}
 		} else {
 			status = TestRun.Status.RUNNING;
 		}
+		tests.sort(Comparator.comparing(TestRun.Test::nodeId));
+		failures.sort(Comparator.comparing(TestRun.Failure::nodeId));
 		return new TestRun(testRun.getExecutionId(),
 		                   testRun.getName(),
 		                   testRun.getProjectPath(),
+		                   status,
+		                   process(testRun),
 		                   totalTests,
 		                   successfulTests,
 		                   failedTests,
 		                   ignoredTests,
-		                   instantToString(testRun.getScheduledAt()),
 		                   instantToString(testRun.getStartedAt()),
 		                   instantToString(lastUpdateAt),
 		                   durationToString(testRun.getStartedAt(), lastUpdateAt),
-		                   status,
 		                   testRun.idleFor().toString(),
-		                   testRun.getPid(),
-		                   testRun.getExitCode(),
 		                   tests,
 		                   failures);
 	}
 
-	private static TestRun.Status calculateFromTests(long totalTests, long successfulTests, long failedTests, long ignoredTests) {
-		if (totalTests > successfulTests + failedTests + ignoredTests) {
-			// This would indicate that the test ended in the middle of things, for some reason. 
-			// Or, in theory, that some test didn't classify as successful, failed, or ignored.
-			// Timed out, perhaps. But then that would either be reported as failed or the process 
-			// would have been terminated, which would mean that we're take the branch above. 
-			// Keep this still
-			log.warn("Had more total tests than finished tests. Total: {}. Successful: {}. Failed: {}. Ignored: {}",
-			         totalTests,
-			         successfulTests,
-			         failedTests,
-			         ignoredTests);
-			return TestRun.Status.ABORTED;
-		} else if (failedTests > 0) {
-			return TestRun.Status.COMPLETED_WITH_FAILURES;
-		} else {
-			return TestRun.Status.COMPLETED_SUCCESSFULLY;
-		}
+	private static net.jevring.jetbrainsjobsstatus.rest.model.Process process(net.jevring.jetbrainsjobsstatus.services.jobs.TestRun testRun) {
+		Process process = testRun.process();
+		return new net.jevring.jetbrainsjobsstatus.rest.model.Process(process.getPid(),
+		                                                              instantToString(process.getScheduledAt()),
+		                                                              instantToString(process.getStartedAt()),
+		                                                              instantToString(process.getEndedAt()),
+		                                                              process.getExitCode());
 	}
 
 	private static String durationToString(Instant startedAt, Instant lastUpdateAt) {

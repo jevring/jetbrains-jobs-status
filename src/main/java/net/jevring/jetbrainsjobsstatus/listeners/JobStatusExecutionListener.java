@@ -18,7 +18,9 @@ public class JobStatusExecutionListener implements ExecutionListener {
 			// We're assuming this is a test, because we're listening to the tests with a similarly named class
 			String projectPath = env.getProject().getBasePath();
 			String name = runProfile.getName();
-			service().testRun(env.getExecutionId()).scheduled(name, projectPath);
+			TestRun testRun = service().testRun(env.getExecutionId());
+			testRun.setNameAndProjectPath(name, projectPath);
+			testRun.process().scheduled();
 		}
 	}
 
@@ -26,7 +28,7 @@ public class JobStatusExecutionListener implements ExecutionListener {
 	public void processStarting(@NotNull String executorId, @NotNull ExecutionEnvironment env, @NotNull ProcessHandler handler) {
 		RunProfile runProfile = env.getRunProfile();
 		if (runProfile instanceof SMRunnerConsolePropertiesProvider) {
-			service().testRun(env.getExecutionId()).started(Utils.pidOf(handler));
+			service().testRun(env.getExecutionId()).process().starting(Utils.pidOf(handler));
 		}
 	}
 
@@ -34,9 +36,7 @@ public class JobStatusExecutionListener implements ExecutionListener {
 	public void processNotStarted(@NotNull String executorId, @NotNull ExecutionEnvironment env, Throwable cause) {
 		RunProfile runProfile = env.getRunProfile();
 		if (runProfile instanceof SMRunnerConsolePropertiesProvider) {
-			// If the process wasn't even started, it's the same, semantically, as if it was terminated in the middle.
-			// It's still aborted. The only thing that differs is the number of test registered (0 in this case)
-			service().testRun(env.getExecutionId()).finished(TestRun.Termination.NOT_STARTED, null);
+			service().testRun(env.getExecutionId()).process().notStarted();
 		}
 	}
 
@@ -44,9 +44,7 @@ public class JobStatusExecutionListener implements ExecutionListener {
 	public void processTerminated(@NotNull String executorId, @NotNull ExecutionEnvironment env, @NotNull ProcessHandler handler, int exitCode) {
 		RunProfile runProfile = env.getRunProfile();
 		if (runProfile instanceof SMRunnerConsolePropertiesProvider) {
-			// We're not going to make assumptions about the termination based on the exit code. 
-			// We're going to rely on something else making that call
-			service().testRun(env.getExecutionId()).finished(null, exitCode);
+			service().testRun(env.getExecutionId()).process().terminated(exitCode);
 		}
 	}
 

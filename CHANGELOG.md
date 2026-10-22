@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.0.8] - 2026-10-22
+
+### Added
+
+- Names and "urls" of tests in the endpoint
+- Separate the process into a separate object in the response, so that it can be evaluated independently of the test itself. In theory, there could be tests
+  without processes, so this would then match.
+
+### Fixed
+
+- Plugin couldn't be unloaded due to clean-up task (you will likely need to restart IntelliJ IDEA to update)
+
 ## [0.0.7] - 2026-10-21
 
 ### Added

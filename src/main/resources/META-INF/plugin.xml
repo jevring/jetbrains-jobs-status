@@ -15,7 +15,6 @@
 	-->
 
 	<extensions defaultExtensionNs="com.intellij">
-		<backgroundPostStartupActivity implementation="net.jevring.jetbrainsjobsstatus.services.JobStatusStartupActivity"/>
 		<httpRequestHandler implementation="net.jevring.jetbrainsjobsstatus.rest.JobsStatusRestService"/>
 	</extensions>
 

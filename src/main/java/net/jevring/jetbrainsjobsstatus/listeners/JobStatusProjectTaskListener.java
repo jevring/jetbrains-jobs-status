@@ -14,7 +14,6 @@ import java.util.*;
 import java.util.concurrent.atomic.*;
 
 public class JobStatusProjectTaskListener implements ProjectTaskListener {
-	private static final Logger log = Logger.getInstance(JobStatusProjectTaskListener.class);
 	private static final AtomicLong ID = new AtomicLong();
 	private static final String ID_DATA_KEY_NAME = "job-status-build-id";
 	private static final Key<Long> ID_KEY = Key.create(ID_DATA_KEY_NAME);
@@ -30,22 +29,14 @@ public class JobStatusProjectTaskListener implements ProjectTaskListener {
 			// These assumptions are based on observations, and might be wrong. Let's see if it turns out to be wrong in the future
 			List<ModuleBuildTask> moduleBuildTasks = projectTaskScope.getRequestedTasks(ModuleBuildTask.class);
 			if (!moduleBuildTasks.isEmpty()) {
-				if (moduleBuildTasks.size() > 1) {
-					log.info("We got more than 1 build task per project task. Found " + moduleBuildTasks.size());
-				}
-				Long buildId = null;
-
-				for (ModuleBuildTask buildTask : moduleBuildTasks) {
-					if (buildId != null) {
-						log.info("We got more than 1 build task per project task. Skipping this one " + buildTask);
-						continue; // to the next build task
-					}
-					Module module = buildTask.getModule();
-					String projectBasePath = module.getProject().getBasePath();
-					buildId = ID.getAndIncrement();
-					context.putUserData(ID_KEY, buildId);
-					build(buildId).started(projectBasePath);
-				}
+				// If we have a multi-module project, they'll all be built at the same time.
+				// However, we just need *one* of them to generate an id, so take the first one
+				ModuleBuildTask buildTask = moduleBuildTasks.getFirst();
+				Module module = buildTask.getModule();
+				String projectBasePath = module.getProject().getBasePath();
+				long buildId = ID.getAndIncrement();
+				context.putUserData(ID_KEY, buildId);
+				build(buildId).started(projectBasePath);
 			}
 		}
 	}

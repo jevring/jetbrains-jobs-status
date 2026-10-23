@@ -17,7 +17,8 @@ import java.util.concurrent.*;
 public final class JobStatusApplicationService implements Disposable {
 	private static final Logger log = Logger.getInstance(JobStatusApplicationService.class);
 	private static final Duration CLEAN_UP_AGE = Duration.ofMinutes(10);
-	private final ScheduledFuture<?> CLEAN_UP_SCHEDULE =
+	
+	private final ScheduledFuture<?> cleanUpTask =
 			AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(this::cleanUp, 1, 1, TimeUnit.MINUTES);
 	private final Map<Long, TestRun> testRuns = new ConcurrentHashMap<>();
 	private final Map<Long, Build> builds = new ConcurrentHashMap<>();
@@ -48,14 +49,13 @@ public final class JobStatusApplicationService implements Disposable {
 
 	@Override
 	public void dispose() {
-		CLEAN_UP_SCHEDULE.cancel(true);
+		cleanUpTask.cancel(true);
 	}
 
 	/**
 	 * Cleans up inactive jobs that are older than {@link #CLEAN_UP_AGE}.
 	 */
 	void cleanUp() {
-		System.out.println("JobStatusApplicationService.cleanUp");
 		try {
 			cleanUp(testRuns);
 			cleanUp(builds);

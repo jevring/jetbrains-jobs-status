@@ -55,12 +55,19 @@ public class TestStateMachine {
 	}
 
 	public void finished() {
-		if (state != TestState.FAILED && state != TestState.IGNORED) {
+		// This method is called when the test is finished, no matter if it was successful or a failure.
+		// It is not called when the test was ignores.
+		if (state == TestState.FAILED) {
+			// Do nothing. The test failed, and we already know it did.
+			// This happens for every failed test. We have already recorded the ending
+			return;
+		}
+		if (state != TestState.IGNORED) {
 			state = TestState.SUCCEEDED;
 			lastUpdatedAt = Instant.now();
 			endedAt = lastUpdatedAt;
 		} else {
-			System.err.printf("Tried to transition from %s to IGNORED. Ignoring%n", state);
+			System.err.printf("Tried to transition from %s to SUCCEEDED. Ignoring%n", state);
 		}
 	}
 

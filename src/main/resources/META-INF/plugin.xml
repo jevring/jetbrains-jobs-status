@@ -26,5 +26,9 @@
 		<listener class="net.jevring.jetbrainsjobsstatus.listeners.JobStatusProjectTaskListener"
 				  topic="com.intellij.task.ProjectTaskListener"/>
 	</projectListeners>
+
+	<extensions defaultExtensionNs="com.intellij">
+		<errorHandler implementation="com.intellij.diagnostic.JetBrainsMarketplaceErrorReportSubmitter"/>
+	</extensions>
 </idea-plugin>
 

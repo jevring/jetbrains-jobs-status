@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.0.9] - 2026-10-23
+
+### Fixed
+
+- Process handling now works around bugs in the MCP implementation to reliably set pid and run configuration name etc
+- Better status handling
+
+### Added
+
+- JetBrains error reporting
+- Support aborted builds
+
 ## [0.0.8] - 2026-10-22
 
 ### Added

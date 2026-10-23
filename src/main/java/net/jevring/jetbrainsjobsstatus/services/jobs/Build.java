@@ -5,11 +5,11 @@ import java.util.*;
 
 public final class Build implements Job {
 	private final long id;
-	private String projectPath;
-	private BuildState state = BuildState.STARTED;
+	private volatile String projectPath;
+	private volatile BuildState state = BuildState.STARTED;
 
-	private Instant startedAt;
-	private Instant endedAt;
+	private volatile Instant startedAt;
+	private volatile Instant endedAt;
 
 	public Build(long id) {
 		this.id = id;

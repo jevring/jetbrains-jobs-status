@@ -87,12 +87,12 @@ public class JobsStatusRestService extends RestService {
 						case "tests" -> {
 							List<TestRun> testRuns = service.getTestRuns().stream().map(testRun -> mapTestRun(testRun, verbose)).toList();
 							sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, testRuns);
-							return null;
+							return "ok";
 						}
 						case "builds" -> {
 							List<Build> builds = service.getBuilds().stream().map(JobsStatusRestService::mapBuild).toList();
 							sendResponse(HttpResponseStatus.OK, fullHttpRequest, channelHandlerContext, builds);
-							return null;
+							return "ok";
 						}
 						default -> {
 							sendNotFound(fullHttpRequest, channelHandlerContext);
@@ -191,7 +191,14 @@ public class JobsStatusRestService extends RestService {
 				status = TestRun.Status.COMPLETED_SUCCESSFULLY;
 			}
 		} else {
-			status = TestRun.Status.RUNNING;
+			if (testRun.process().getEndedAt() != null) {
+				// If the test hasn't yet finished, but the process has, then the test was aborted.
+				// Maybe the process never started in the first place
+				// todo: handle this in idleFor etc
+				status = TestRun.Status.ABORTED;
+			} else {
+				status = TestRun.Status.RUNNING;
+			}
 		}
 		tests.sort(Comparator.comparing(TestRun.Test::nodeId));
 		failures.sort(Comparator.comparing(TestRun.Failure::nodeId));
@@ -208,7 +215,7 @@ public class JobsStatusRestService extends RestService {
 		                   instantToString(lastUpdateAt),
 		                   durationToString(testRun.getStartedAt(), lastUpdateAt),
 		                   testRun.idleFor().toString(),
-		                   tests,
+		                   verbose ? tests : null,
 		                   failures);
 	}
 

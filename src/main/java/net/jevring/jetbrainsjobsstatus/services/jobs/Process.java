@@ -12,12 +12,18 @@ public class Process {
 	private volatile Integer exitCode;
 
 	public void scheduled() {
-		this.scheduledAt = Instant.now();
+		if (this.scheduledAt == null) {
+			this.scheduledAt = Instant.now();
+		}
 	}
 
 	public void starting(@Nullable Long pid) {
-		this.startedAt = Instant.now();
-		this.pid = pid;
+		if (this.startedAt == null) {
+			this.startedAt = Instant.now();
+		}
+		if (this.pid == null) {
+			this.pid = pid;
+		}
 	}
 
 	public void notStarted() {

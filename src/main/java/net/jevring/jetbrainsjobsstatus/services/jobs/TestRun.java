@@ -13,8 +13,6 @@ public final class TestRun implements Job {
 	private final Process process = new Process();
 	private final long executionId;
 
-	// todo: clean up what we don't need in here
-
 	// These fields are mutated on the EDT and read by the RestService on a different thread, so they should be volatile
 	private volatile Instant startedAt;
 	private volatile Instant finishedAt;
@@ -35,8 +33,12 @@ public final class TestRun implements Job {
 	}
 
 	public void setNameAndProjectPath(String name, String projectPath) {
-		this.name = name;
-		this.projectPath = projectPath;
+		if (this.name == null) {
+			this.name = name;
+		}
+		if (this.projectPath == null) {
+			this.projectPath = projectPath;
+		}
 	}
 
 	public void started() {

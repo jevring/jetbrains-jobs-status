@@ -3,6 +3,7 @@ package net.jevring.jetbrainsjobsstatus.services;
 import com.intellij.openapi.*;
 import com.intellij.openapi.components.*;
 import com.intellij.openapi.diagnostic.*;
+import com.intellij.openapi.project.*;
 import com.intellij.util.concurrency.*;
 import net.jevring.jetbrainsjobsstatus.services.jobs.*;
 
@@ -17,7 +18,7 @@ import java.util.concurrent.*;
 public final class JobStatusApplicationService implements Disposable {
 	private static final Logger log = Logger.getInstance(JobStatusApplicationService.class);
 	private static final Duration CLEAN_UP_AGE = Duration.ofMinutes(10);
-	
+
 	private final ScheduledFuture<?> cleanUpTask =
 			AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(this::cleanUp, 1, 1, TimeUnit.MINUTES);
 	private final Map<Long, TestRun> testRuns = new ConcurrentHashMap<>();
@@ -45,6 +46,21 @@ public final class JobStatusApplicationService implements Disposable {
 
 	public List<Build> getBuilds() {
 		return builds.values().stream().sorted(Comparator.comparing(Build::getId)).toList();
+	}
+
+	public void cancelAllRunningJobsForProject(Project project) {
+		// We cancel them because, with the project closed, they'll never (or they might not, I'm not sure) get their 
+		// other lifecycle callbacks.
+		for (TestRun testRun : testRuns.values()) {
+			if (testRun.getProjectPath().equals(project.getBasePath()) && testRun.isActive()) {
+				testRun.finished(true);
+			}
+		}
+		for (Build build : builds.values()) {
+			if (build.getProjectPath().equals(project.getBasePath()) && build.isActive()) {
+				build.complete(BuildState.ABORTED);
+			}
+		}
 	}
 
 	@Override

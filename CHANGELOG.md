@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.0.10] - 2026-11-27
+
+### Fixed
+
+- Listen to project lifecycle events so that jobs from projects that are closed don't linger
+
 ## [0.0.9] - 2026-10-23
 
 ### Fixed

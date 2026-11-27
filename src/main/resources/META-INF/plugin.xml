@@ -19,6 +19,8 @@
 	</extensions>
 
 	<projectListeners>
+		<listener class="net.jevring.jetbrainsjobsstatus.listeners.JobStatusProjectManagerListener"
+				  topic="com.intellij.openapi.project.ProjectManagerListener"/>
 		<listener class="net.jevring.jetbrainsjobsstatus.listeners.JobStatusTestStatusListener"
 				  topic="com.intellij.execution.testframework.sm.runner.SMTRunnerEventsListener"/>
 		<listener class="net.jevring.jetbrainsjobsstatus.listeners.JobStatusExecutionListener"
